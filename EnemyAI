@@ -1,0 +1,124 @@
+using UnityEngine;
+using UnityEngine.AI;
+
+public class enemyAi : MonoBehaviour
+{
+    private NavMeshAgent agent;
+
+    public int damage;
+
+    private Transform player;
+
+    public float timeBetweenAttacks;
+    bool alreadyAttacked;
+
+    public float attackRange;
+    private bool playerInSightRange, playerInAttackRange;
+
+
+    public string enemyTag = "Player";
+
+    Animator anim;
+
+
+    private void Awake()
+    {
+        agent = GetComponent<NavMeshAgent>();
+    }
+
+    void Start()
+    {
+        InvokeRepeating("UpdateTarget", 0f, 0.5f);
+        anim = GetComponent<Animator>();
+    }
+
+    void UpdateTarget()
+    {
+        GameObject[] enemies = GameObject.FindGameObjectsWithTag(enemyTag);
+        float shortestDistance = Mathf.Infinity;
+
+        GameObject nearestEnemy = null;
+
+
+        foreach (GameObject enemy in enemies)
+        {
+            float distanceToEnemy = Vector3.Distance(transform.position, enemy.transform.position);
+            if (distanceToEnemy < shortestDistance)
+            {
+                shortestDistance = distanceToEnemy;
+                nearestEnemy = enemy;
+            }
+        }
+
+        if (nearestEnemy != null)
+        {
+            player = nearestEnemy.transform;
+        }
+        else
+        {
+            player = null;
+        }
+    }
+
+    private void Update()
+    {
+        if (player != null)
+        {
+            float distanceToEnemy = Vector3.Distance(transform.position, player.transform.position);
+
+            ChasePlayer();
+            anim.SetBool("Walk Forward", true);
+            
+            if (distanceToEnemy <= attackRange)
+            {
+                AttackPlayer();
+                anim.SetBool("Walk Forward", false);
+            }
+        }
+    }
+
+
+    private void ChasePlayer()
+    {
+        agent.SetDestination(player.position);
+    }
+
+    private void AttackPlayer()
+    {
+        agent.SetDestination(transform.position);
+
+        transform.LookAt(player);
+
+
+        if (!alreadyAttacked)
+        {
+            anim.SetBool("Stab Attack", true);
+            Damage(player);
+
+            alreadyAttacked = true;
+            Invoke(nameof(ResetAttack), timeBetweenAttacks);
+        }
+
+
+    }
+
+    void Damage(Transform player)
+    {
+        PlayerBuilt p = player.GetComponent<PlayerBuilt>();
+
+        if (p != null)
+        {
+            anim.SetBool("Take Damage", true);
+            p.TakeDamage(damage);
+
+        }
+    }
+
+    private void ResetAttack()
+    {
+        alreadyAttacked = false;
+    }
+
+    
+
+}
